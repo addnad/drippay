@@ -1,6 +1,6 @@
 {
-  "name": "Drippay",
-  "short_name": "Drippay",
+  "name": "Flowra",
+  "short_name": "Flowra",
   "description": "A programmable payments platform on Arc Network",
   "start_url": "/",
   "display": "standalone",

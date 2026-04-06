@@ -12,7 +12,7 @@ import { MapPin, Clock, Pause, Play, X, CheckCircle2, XCircle, Loader2, ArrowLef
 import { formatUsdc, timeRemaining, streamProgress, STATUS_LABELS, STATUS_COLORS } from "@/lib/utils";
 import { DRIPLY_ABI } from "@/lib/abi";
 import { DRIPLY_CONTRACT_ADDRESS, BACKEND_URL } from "@/lib/wagmi";
-import { DrippayLogo } from "@/components/ui/logo";
+import { FlowraLogo } from "@/components/ui/logo";
 import { ProofSubmission } from "@/components/ui/proof-submission";
 
 interface StreamData {
@@ -84,7 +84,7 @@ export default function StreamDetailPage() {
       });
       const data = await res.json();
       setUnlockRequest(data.request);
-      toast.success("Emergency unlock request sent to sender.");
+      toast.success("Flowra has sent your request to the sender.");
     } catch (e) {
       toast.error("Failed to send request.");
     } finally {
@@ -104,7 +104,7 @@ export default function StreamDetailPage() {
         });
         toast.info(`Approving ${unlockRequest.percentage || 100}% emergency unlock on-chain…`);
       } else {
-        toast.success("Request rejected.");
+        toast.info("Flowra has rejected the emergency request.");
         fetchUnlockRequest();
       }
     } catch (e) {
@@ -134,7 +134,7 @@ export default function StreamDetailPage() {
 
   useEffect(() => {
     if (!isSuccess || !txHash) return;
-    toast.success("Transaction confirmed!");
+    toast.success("Flowra released your funds.");
     reset();
     fetchStream();
     setLocationVerif({ allowed: null, distanceMeters: null, signature: null, message: "", checking: false });
@@ -148,7 +148,7 @@ export default function StreamDetailPage() {
       navigator.geolocation.getCurrentPosition(resolve, () => resolve(null), { timeout: 10_000 });
     });
     if (!geo) {
-      toast.error("Could not get your location. Please allow location access.");
+      toast.error("Flowra needs your location. Please allow access and try again.");
       setLocationVerif(v => ({ ...v, checking: false, allowed: false, message: "Location access denied." }));
       return;
     }
@@ -160,8 +160,8 @@ export default function StreamDetailPage() {
       });
       const data = await res.json();
       setLocationVerif({ allowed: data.allowed, distanceMeters: data.distanceMeters, signature: data.signature, message: data.message, checking: false });
-      if (data.allowed) { toast.success("Location verified! You can now claim."); }
-      else { toast.error(data.message || "You are outside the allowed zone."); }
+      if (data.allowed) { toast.success("Flowra verified your location. Funds can now be released."); }
+      else { toast.error(data.message || "Flowra couldn't verify your location. Move closer to the required area."); }
     } catch (err) {
       console.error(err);
       toast.error("Location verification failed. Is the backend running?");
@@ -177,7 +177,7 @@ export default function StreamDetailPage() {
     } else {
       writeContract({ address: DRIPLY_CONTRACT_ADDRESS, abi: DRIPLY_ABI, functionName: "claimFunds", args: [streamId, "0x"] });
     }
-    toast.info("Submitting claim…");
+    toast.info("Flowra is processing your claim…");
   }
 
   const isSender   = stream && address && stream.sender.toLowerCase()   === address.toLowerCase();
@@ -213,7 +213,7 @@ export default function StreamDetailPage() {
         <div className="flex items-start justify-between mb-6">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <DrippayLogo size={20} />
+              <FlowraLogo size={20} />
               <h1 className="text-2xl font-bold text-white">Stream #{id}</h1>
             </div>
             <span className={`text-sm font-medium ${STATUS_COLORS[stream.status]}`}>{STATUS_LABELS[stream.status]}</span>
@@ -298,7 +298,7 @@ export default function StreamDetailPage() {
         {isReceiver && stream.status === 0 && (
           <button onClick={handleClaim} disabled={isLoading || claimable === 0n || (stream.conditionType === 1 && !locationVerif.signature)} className="w-full py-4 rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 text-white font-semibold text-base hover:opacity-90 transition-opacity disabled:opacity-40 flex items-center justify-center gap-2 mb-4">
             {isLoading && <Loader2 className="w-5 h-5 animate-spin" />}
-            {isLoading ? "Processing…" : claimable === 0n ? "Nothing to claim yet" : stream.conditionType === 1 && !locationVerif.signature ? "Verify location first" : `Claim ${formatUsdc(claimable)}`}
+            {isLoading ? "Processing…" : claimable === 0n ? "Flowra has not unlocked funds yet" : stream.conditionType === 1 && !locationVerif.signature ? "Ask Flowra to verify your location first" : `Flowra: Claim ${formatUsdc(claimable)}`}
           </button>
         )}
 
@@ -319,16 +319,16 @@ export default function StreamDetailPage() {
               <p className="text-gray-500 text-xs uppercase tracking-wider mb-4">Sender controls</p>
               <div className="flex gap-3">
                 {stream.status === 0 && (
-                  <button onClick={() => { writeContract({ address: DRIPLY_CONTRACT_ADDRESS, abi: DRIPLY_ABI, functionName: "pauseStream", args: [streamId] }); toast.info("Pausing…"); }} disabled={isLoading} className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 text-sm font-medium hover:bg-yellow-500/20 transition-colors disabled:opacity-50">
+                  <button onClick={() => { writeContract({ address: DRIPLY_CONTRACT_ADDRESS, abi: DRIPLY_ABI, functionName: "pauseStream", args: [streamId] }); toast.info("Flowra has paused this payment stream."); }} disabled={isLoading} className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 text-sm font-medium hover:bg-yellow-500/20 transition-colors disabled:opacity-50">
                     <Pause className="w-4 h-4" /> Pause
                   </button>
                 )}
                 {stream.status === 1 && (
-                  <button onClick={() => { writeContract({ address: DRIPLY_CONTRACT_ADDRESS, abi: DRIPLY_ABI, functionName: "resumeStream", args: [streamId] }); toast.info("Resuming…"); }} disabled={isLoading} className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-green-500/10 border border-green-500/20 text-green-400 text-sm font-medium hover:bg-green-500/20 transition-colors disabled:opacity-50">
+                  <button onClick={() => { writeContract({ address: DRIPLY_CONTRACT_ADDRESS, abi: DRIPLY_ABI, functionName: "resumeStream", args: [streamId] }); toast.info("Flowra resumed the payment stream."); }} disabled={isLoading} className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-green-500/10 border border-green-500/20 text-green-400 text-sm font-medium hover:bg-green-500/20 transition-colors disabled:opacity-50">
                     <Play className="w-4 h-4" /> Resume
                   </button>
                 )}
-                <button onClick={() => { if (!confirm("Cancel this stream?")) return; writeContract({ address: DRIPLY_CONTRACT_ADDRESS, abi: DRIPLY_ABI, functionName: "cancelStream", args: [streamId] }); toast.info("Cancelling…"); }} disabled={isLoading} className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm font-medium hover:bg-red-500/20 transition-colors disabled:opacity-50">
+                <button onClick={() => { if (!confirm("Cancel this stream?")) return; writeContract({ address: DRIPLY_CONTRACT_ADDRESS, abi: DRIPLY_ABI, functionName: "cancelStream", args: [streamId] }); toast.info("Flowra is settling this stream…"); }} disabled={isLoading} className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm font-medium hover:bg-red-500/20 transition-colors disabled:opacity-50">
                   <X className="w-4 h-4" /> Cancel
                 </button>
               </div>

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAccount, usePublicClient } from "wagmi";
 import { Navbar } from "@/components/ui/navbar";
-import { DrippayLogo } from "@/components/ui/logo";
+import { FlowraLogo } from "@/components/ui/logo";
 import { RefreshCw, TrendingUp, Droplets, Users, Zap } from "lucide-react";
 import { formatUsdc } from "@/lib/utils";
 import { DRIPLY_ABI } from "@/lib/abi";
@@ -98,7 +98,7 @@ export default function AnalyticsPage() {
     return (
       <div className="min-h-screen bg-black flex flex-col items-center justify-center gap-6">
         <Navbar />
-        <DrippayLogo size={48} />
+        <FlowraLogo size={48} />
         <h1 className="text-2xl font-bold text-white">Connect your wallet</h1>
         <p className="text-gray-400">Connect to view your analytics</p>
       </div>

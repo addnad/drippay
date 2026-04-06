@@ -10,7 +10,7 @@ import {
   ArrowUpRight, ArrowDownLeft,
   Pause, Play, X, RefreshCw, PlusCircle, MapPin, Clock, Share2,
 } from "lucide-react";
-import { DrippayLogo } from "@/components/ui/logo";
+import { FlowraLogo } from "@/components/ui/logo";
 import { formatUsdc, timeRemaining, streamProgress, STATUS_LABELS, STATUS_COLORS } from "@/lib/utils";
 import { DRIPLY_ABI } from "@/lib/abi";
 import { DRIPLY_CONTRACT_ADDRESS } from "@/lib/wagmi";
@@ -38,7 +38,7 @@ function StreamCard({ stream, onAction }: { stream: StreamData; onAction: () => 
   const isLoading = isPending || isConfirming;
 
   useEffect(() => {
-    if (txHash && !isConfirming) { toast.success("Done!"); onAction(); }
+    if (txHash && !isConfirming) { toast.success("Flowra has settled this stream and returned remaining funds."); onAction(); }
   }, [txHash, isConfirming]);
 
   return (
@@ -101,16 +101,16 @@ function StreamCard({ stream, onAction }: { stream: StreamData; onAction: () => 
           )}
           {isSender && stream.status === 0 && (
             <>
-              <button onClick={() => { writeContract({ address: DRIPLY_CONTRACT_ADDRESS, abi: DRIPLY_ABI, functionName: "pauseStream", args: [stream.id] }); toast.info("Pausing…"); }} disabled={isLoading} className="flex items-center gap-1.5 px-3 py-2 text-xs rounded-lg bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 hover:bg-yellow-500/20 transition-colors disabled:opacity-50">
+              <button onClick={() => { writeContract({ address: DRIPLY_CONTRACT_ADDRESS, abi: DRIPLY_ABI, functionName: "pauseStream", args: [stream.id] }); toast.info("Flowra has paused this payment stream."); }} disabled={isLoading} className="flex items-center gap-1.5 px-3 py-2 text-xs rounded-lg bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 hover:bg-yellow-500/20 transition-colors disabled:opacity-50">
                 <Pause className="w-3 h-3" /> Pause
               </button>
-              <button onClick={() => { if (!confirm("Cancel this stream?")) return; writeContract({ address: DRIPLY_CONTRACT_ADDRESS, abi: DRIPLY_ABI, functionName: "cancelStream", args: [stream.id] }); toast.info("Cancelling…"); }} disabled={isLoading} className="flex items-center gap-1.5 px-3 py-2 text-xs rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition-colors disabled:opacity-50">
+              <button onClick={() => { if (!confirm("Cancel this stream?")) return; writeContract({ address: DRIPLY_CONTRACT_ADDRESS, abi: DRIPLY_ABI, functionName: "cancelStream", args: [stream.id] }); toast.info("Flowra is settling this stream…"); }} disabled={isLoading} className="flex items-center gap-1.5 px-3 py-2 text-xs rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition-colors disabled:opacity-50">
                 <X className="w-3 h-3" /> Cancel
               </button>
             </>
           )}
           {isSender && stream.status === 1 && (
-            <button onClick={() => { writeContract({ address: DRIPLY_CONTRACT_ADDRESS, abi: DRIPLY_ABI, functionName: "resumeStream", args: [stream.id] }); toast.info("Resuming…"); }} disabled={isLoading} className="flex items-center gap-1.5 px-3 py-2 text-xs rounded-lg bg-green-500/10 text-green-400 border border-green-500/20 hover:bg-green-500/20 transition-colors disabled:opacity-50">
+            <button onClick={() => { writeContract({ address: DRIPLY_CONTRACT_ADDRESS, abi: DRIPLY_ABI, functionName: "resumeStream", args: [stream.id] }); toast.info("Flowra resumed the payment stream."); }} disabled={isLoading} className="flex items-center gap-1.5 px-3 py-2 text-xs rounded-lg bg-green-500/10 text-green-400 border border-green-500/20 hover:bg-green-500/20 transition-colors disabled:opacity-50">
               <Play className="w-3 h-3" /> Resume
             </button>
           )}
@@ -208,7 +208,7 @@ export default function DashboardPage() {
     return (
       <div className="min-h-screen bg-black flex flex-col items-center justify-center gap-6">
         <Navbar />
-        <DrippayLogo size={48} />
+        <FlowraLogo size={48} />
         <h1 className="text-2xl font-bold text-white">Connect your wallet</h1>
         <p className="text-gray-400">Connect to view your streams</p>
       </div>
@@ -264,7 +264,7 @@ export default function DashboardPage() {
           </div>
         ) : filtered.length === 0 ? (
           <div className="text-center py-24 border border-dashed border-white/10 rounded-2xl">
-            <DrippayLogo size={48} />
+            <FlowraLogo size={48} />
             <p className="text-gray-400 mb-4">No streams yet</p>
             <a href="/create" className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 text-white text-sm font-medium hover:opacity-90 transition-opacity">
               <PlusCircle className="w-4 h-4" /> Create your first stream

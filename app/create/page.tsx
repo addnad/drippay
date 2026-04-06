@@ -84,11 +84,11 @@ export default function CreateStreamPage() {
   useEffect(() => {
     if (!isSuccess || !txHash) return;
     if (step === "approve") {
-      toast.success("USDC approved!");
+      toast.success("USDC approved. Flowra is ready.");
       setStep("create");
       reset();
     } else if (step === "create") {
-      toast.success("Stream created! 🎉");
+      toast.success("Flowra is now managing this payment.");
       // Save stream metadata if proof condition
       if (conditionMode === "proof") {
         saveStreamMeta();
@@ -156,7 +156,7 @@ export default function CreateStreamPage() {
       functionName: "createStream",
       args: [receiver as `0x${string}`, USDC_ADDRESS, rawAmount, BigInt(duration), BigInt(interval), conditionType, conditionData],
     });
-    toast.info("Creating stream…");
+    toast.info("Assigning Flowra to your payment…");
   }
 
   const isLoading = isPending || isConfirming || checkingAllowance;
@@ -176,7 +176,7 @@ export default function CreateStreamPage() {
           <div className="w-20 h-20 rounded-full bg-green-500/20 border border-green-500/30 flex items-center justify-center mx-auto mb-6">
             <CheckCircle2 className="w-10 h-10 text-green-400" />
           </div>
-          <h1 className="text-3xl font-bold text-white mb-3">Stream created!</h1>
+          <h1 className="text-3xl font-bold text-white mb-3">Flowra is on it.</h1>
           <p className="text-gray-400 mb-8">${amountUsd} USDC is now streaming over {Math.round(duration / 86400)} days.</p>
           <div className="flex gap-3 justify-center">
             <a href="/dashboard" className="px-6 py-3 rounded-full bg-blue-600 text-white text-sm font-medium hover:opacity-90 transition-opacity">View Dashboard</a>

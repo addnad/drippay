@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { useAccount, useConnect, useDisconnect } from "wagmi";
-import { DrippayLogo } from "@/components/ui/logo";
+import { FlowraLogo } from "@/components/ui/logo";
 
 const AnimatedNavLink = ({ href, children }: { href: string; children: React.ReactNode }) => (
   <a href={href} className="group relative inline-block overflow-hidden h-5 flex items-center text-sm">
@@ -49,8 +49,8 @@ export function Navbar() {
       >
         <div className="flex items-center justify-between px-5 py-3 gap-4">
           <a href="/" className="flex items-center gap-2 shrink-0">
-            <DrippayLogo size={28} />
-            <span className="text-white font-semibold text-sm tracking-tight">Drippay</span>
+            <FlowraLogo size={28} />
+            <span className="text-white font-semibold text-sm tracking-tight">Flowra</span>
           </a>
 
           <nav className="hidden sm:flex items-center gap-6">

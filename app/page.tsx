@@ -9,7 +9,7 @@ import {
   CheckCircle, ArrowRight, Clock,
   MapPin, Shield, Zap, Users, Pause, Twitter, Github, AlertTriangle,
 } from "lucide-react";
-import { DrippayLogo } from "@/components/ui/logo";
+import { FlowraLogo } from "@/components/ui/logo";
 
 export default function HomePage() {
   return (
@@ -30,20 +30,20 @@ export default function HomePage() {
             <div className="flex h-full">
               <div className="flex-1 p-10 relative z-10 flex flex-col justify-center">
                 <div className="inline-flex items-center gap-2 mb-6 px-3 py-1 rounded-full border border-blue-500/30 bg-blue-500/10 w-fit">
-                  <DrippayLogo size={14} />
-                  <span className="text-xs text-blue-300 font-medium">Built on Arc Network</span>
+                  <FlowraLogo size={14} />
+                  <span className="text-xs text-blue-300 font-medium">Programmable Payments on Arc Network</span>
                 </div>
                 <h1 className="text-4xl md:text-5xl font-bold text-white bg-gradient-to-b from-neutral-50 to-neutral-400 bg-clip-text text-transparent">
-                  Send Money<br />That Flows Over Time
+                  Meet Flowra —<br />Your Payment Agent
                 </h1>
                 <p className="mt-4 text-neutral-300 max-w-lg text-base leading-relaxed">
-                  Drippay lets you stream USDC to anyone — drip by drip — with smart conditions
+                  Flowra lets you stream USDC to anyone — drip by drip — with smart conditions
                   like location-gating. Perfect for allowances, payroll, milestones, and more.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 mt-8">
                   <a href="/create">
                     <Button size="lg" className="bg-white text-black hover:bg-gray-100">
-                      Start Streaming
+                      Start with Flowra
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
                   </a>
@@ -91,9 +91,9 @@ export default function HomePage() {
               </div>
             </div>
             <div className="space-y-6">
-              <h3 className="text-2xl font-bold text-white">Drippay gives you programmatic control</h3>
+              <h2 className="text-3xl md:text-4xl font-bold text-white">What Flowra does instead</h2>
               <div className="space-y-4 text-gray-300">
-                {["Set it once — money drips to the receiver automatically","Pause or cancel at any time; unlocked funds stay with receiver","Gate claims on GPS location — receiver must be in the right place","On-chain, transparent, and fully non-custodial"].map((t) => (
+                {["Holds your funds securely in a smart contract","Enforces your conditions — time, location, or proof","Releases payments only when everything checks out","No chasing. No middlemen. No uncertainty."].map((t) => (
                   <p key={t} className="flex items-start gap-3"><CheckCircle className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />{t}</p>
                 ))}
               </div>
@@ -196,22 +196,23 @@ export default function HomePage() {
           </BentoGrid>
         </div>
       </section>
-
+      {/* How Flowra Works */}
       <section className="py-24 bg-black">
         <div className="container mx-auto px-4">
           <div className="text-center space-y-4 mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-white">Three steps</h2>
+            <h2 className="text-3xl md:text-4xl font-bold text-white">How Flowra Works</h2>
           </div>
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-4 gap-6">
             {[
-              { n: "1", title: "Create a stream", body: "Set the amount, duration, and release frequency. Attach a condition — location-gated, proof of work (link or image), or none. Approve USDC and confirm on-chain." },
-              { n: "2", title: "Funds drip automatically", body: "Money unlocks per interval — daily, weekly, or custom. The receiver watches their claimable balance grow in real time. No unlocking happens during a pause." },
-              { n: "3", title: "Receiver claims or requests unlock", body: "Receiver claims what's unlocked anytime. If location-gated, GPS is verified first. If proof of work is required, receiver submits evidence and sender (or AI) approves. Need funds early? Request an emergency unlock." },
+              { n: "1", title: "Assign Flowra", body: "Create a payment stream and define your conditions — time, location, or proof of work." },
+              { n: "2", title: "Flowra Monitors", body: "Flowra tracks time intervals, verifies GPS locations, and watches for proof submissions." },
+              { n: "3", title: "Flowra Verifies", body: "Conditions are checked automatically or reviewed when needed. Nothing slips through." },
+              { n: "4", title: "Flowra Releases Funds", body: "Once everything is met, payment is unlocked instantly on-chain. No delays, no disputes." },
             ].map((s) => (
-              <div key={s.n} className="text-center space-y-6">
-                <div className="h-20 w-20 bg-white text-black rounded-full flex items-center justify-center mx-auto text-2xl font-bold">{s.n}</div>
-                <h3 className="text-xl font-bold text-white">{s.title}</h3>
-                <p className="text-gray-300">{s.body}</p>
+              <div key={s.n} className="text-center space-y-4">
+                <div className="h-16 w-16 bg-white text-black rounded-full flex items-center justify-center mx-auto text-xl font-bold">{s.n}</div>
+                <h3 className="text-lg font-bold text-white">{s.title}</h3>
+                <p className="text-gray-300 text-sm">{s.body}</p>
               </div>
             ))}
           </div>
@@ -250,17 +251,17 @@ export default function HomePage() {
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row justify-between items-center gap-8">
             <div className="flex items-center gap-2">
-              <DrippayLogo size={28} />
-              <span className="text-white font-semibold">Drippay</span>
+              <FlowraLogo size={28} />
+              <span className="text-white font-semibold">Flowra</span>
             </div>
             <p className="text-gray-400 text-sm">Smart payment streams on Arc Network.</p>
             <div className="flex gap-4">
-              <a href="#" className="p-2 bg-white/5 border border-white/10 rounded-lg text-gray-400 hover:text-white transition-colors"><Twitter className="h-4 w-4" /></a>
-              <a href="#" className="p-2 bg-white/5 border border-white/10 rounded-lg text-gray-400 hover:text-white transition-colors"><Github className="h-4 w-4" /></a>
+              <a href="https://x.com/1st_bernice" target="_blank" rel="noopener noreferrer" className="p-2 bg-white/5 border border-white/10 rounded-lg text-gray-400 hover:text-white transition-colors"><Twitter className="h-4 w-4" /></a>
+              <a href="https://github.com/addnad/drippay" target="_blank" rel="noopener noreferrer" className="p-2 bg-white/5 border border-white/10 rounded-lg text-gray-400 hover:text-white transition-colors"><Github className="h-4 w-4" /></a>
             </div>
           </div>
           <div className="border-t border-white/10 mt-12 pt-8 text-center">
-            <p className="text-gray-500 text-sm">© 2026 Drippay. All rights reserved.</p>
+            <p className="text-gray-500 text-sm">© 2026 Flowra. All rights reserved.</p>
           </div>
         </div>
       </footer>

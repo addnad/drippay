@@ -53,7 +53,7 @@ export default function HomePage() {
                     </Button>
                   </a>
                 </div>
-                <div className="flex items-center gap-8 text-sm text-neutral-400 mt-6 flex-wrap">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-8 text-sm text-neutral-400 mt-6">
                   <div className="flex items-center gap-2">
                     <CheckCircle className="h-4 w-4 text-green-400" />
                     <span>No intermediaries</span>
@@ -68,7 +68,7 @@ export default function HomePage() {
                   </div>
                 </div>
               </div>
-              <div className="flex-1 relative hidden md:block">
+              <div className="flex-1 relative w-full h-64 md:h-full">
                 <SplineScene
                   scene="https://prod.spline.design/UbM7F-HZcyTbZ4y3/scene.splinecode"
                   className="w-full h-full"

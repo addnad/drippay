@@ -99,7 +99,7 @@ export function ConditionSelector({
               className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-600 text-xs focus:outline-none focus:border-blue-500/50 transition-colors resize-none"
             />
             <p className="text-xs text-gray-600 mt-1">
-              This tells the receiver exactly what to submit. Claude AI can also review submissions against these instructions.
+              This tells the receiver exactly what to submit. Flowra can also review submissions against these instructions.
             </p>
           </div>
         </div>

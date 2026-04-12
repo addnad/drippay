@@ -254,10 +254,10 @@ export default function HomePage() {
               <FlowraLogo size={28} />
               <span className="text-white font-semibold">Flowra</span>
             </div>
-            <p className="text-gray-400 text-sm">Smart payment streams on Arc Network.</p>
+            <p className="text-gray-400 text-sm">Programmable payment streams on Arc Network.</p>
             <div className="flex gap-4">
               <a href="https://x.com/1st_bernice" target="_blank" rel="noopener noreferrer" className="p-2 bg-white/5 border border-white/10 rounded-lg text-gray-400 hover:text-white transition-colors"><Twitter className="h-4 w-4" /></a>
-              <a href="https://github.com/addnad/drippay" target="_blank" rel="noopener noreferrer" className="p-2 bg-white/5 border border-white/10 rounded-lg text-gray-400 hover:text-white transition-colors"><Github className="h-4 w-4" /></a>
+              <a href="https://github.com/addnad/flowra" target="_blank" rel="noopener noreferrer" className="p-2 bg-white/5 border border-white/10 rounded-lg text-gray-400 hover:text-white transition-colors"><Github className="h-4 w-4" /></a>
             </div>
           </div>
           <div className="border-t border-white/10 mt-12 pt-8 text-center">

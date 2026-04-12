@@ -1,0 +1,26 @@
+{
+  "type": "https://eips.ethereum.org/EIPS/eip-8004#registration-v1",
+  "name": "Flowra",
+  "description": "Flowra is an autonomous payment escrow agent on Arc Network. She verifies proof of work submissions, validates GPS locations, and releases USDC streams based on real-world conditions.",
+  "image": "https://agentflowra.xyz/icon.svg",
+  "agent_type": "escrow_verification",
+  "capabilities": [
+    "proof_of_work_verification",
+    "location_validation",
+    "payment_stream_arbitration",
+    "usdc_escrow_management"
+  ],
+  "services": [
+    { "name": "web", "endpoint": "https://agentflowra.xyz" },
+    { "name": "api", "endpoint": "https://flowra-production-2f3c.up.railway.app" }
+  ],
+  "registrations": [
+    {
+      "agentRegistry": "0x8004A818BFB912233c491871b3d84c89A494BD9e",
+      "agentId": 1492,
+      "chainId": 5042002
+    }
+  ],
+  "version": "1.0.0",
+  "platform": "https://agentflowra.xyz"
+}

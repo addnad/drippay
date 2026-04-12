@@ -255,6 +255,10 @@ export default function HomePage() {
               <span className="text-white font-semibold">Flowra</span>
             </div>
             <p className="text-gray-400 text-sm">Programmable payment streams on Arc Network.</p>
+              <a href="https://testnet.arcscan.app/token/0x8004A818BFB912233c491871b3d84c89A494BD9e?a=1492" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 mt-1 text-xs text-blue-400/70 hover:text-blue-400 transition-colors">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse inline-block"></span>
+                ERC-8004 Agent #1492 on Arc Network
+              </a>
             <div className="flex gap-4">
               <a href="https://x.com/1st_bernice" target="_blank" rel="noopener noreferrer" className="p-2 bg-white/5 border border-white/10 rounded-lg text-gray-400 hover:text-white transition-colors"><Twitter className="h-4 w-4" /></a>
               <a href="https://github.com/addnad/flowra" target="_blank" rel="noopener noreferrer" className="p-2 bg-white/5 border border-white/10 rounded-lg text-gray-400 hover:text-white transition-colors"><Github className="h-4 w-4" /></a>

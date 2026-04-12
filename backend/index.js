@@ -171,3 +171,47 @@ app.post("/api/proof-submit/:streamId/reject", (req, res) => {
 
 app.get("/health", (_, res) => res.json({ status: "ok", signer: signer.address }));
 app.listen(PORT, () => console.log(`Flowra backend running on http://localhost:${PORT}`));
+
+// ─── Stream cache endpoints ───────────────────────────────────────────────────
+const streamCache = require("./services/streamCache");
+
+// Frontend posts newly discovered stream IDs + the last scanned block
+app.post("/api/stream-cache", (req, res) => {
+  const { streamIds, lastScannedBlock } = req.body;
+  if (!streamIds || !lastScannedBlock) return res.status(400).json({ error: "Missing fields" });
+  const result = streamCache.updateCache(streamIds, lastScannedBlock);
+  res.json({ success: true, ...result });
+});
+
+// Frontend fetches cache to know what it already has + where to resume scanning
+app.get("/api/stream-cache", (req, res) => {
+  res.json(streamCache.getCache());
+});
+
+// ─── Option C: Stream registry by wallet address ──────────────────────────────
+// Stores stream IDs per wallet so dashboard never scans the chain.
+const REGISTRY_PATH = require("path").join(__dirname, "registry.json");
+function readRegistry() { if (!require("fs").existsSync(REGISTRY_PATH)) return {}; return JSON.parse(require("fs").readFileSync(REGISTRY_PATH, "utf8")); }
+function writeRegistry(data) { require("fs").writeFileSync(REGISTRY_PATH, JSON.stringify(data, null, 2)); }
+
+// Called after stream creation — stores streamId for both sender and receiver
+app.post("/api/registry", (req, res) => {
+  const { streamId, senderAddress, receiverAddress } = req.body;
+  if (!streamId || !senderAddress || !receiverAddress) return res.status(400).json({ error: "Missing fields" });
+  const db = readRegistry();
+  const sender = senderAddress.toLowerCase();
+  const receiver = receiverAddress.toLowerCase();
+  if (!db[sender]) db[sender] = [];
+  if (!db[receiver]) db[receiver] = [];
+  if (!db[sender].includes(streamId.toString())) db[sender].push(streamId.toString());
+  if (!db[receiver].includes(streamId.toString())) db[receiver].push(streamId.toString());
+  writeRegistry(db);
+  res.json({ success: true });
+});
+
+// Called by dashboard — returns all stream IDs for a wallet instantly
+app.get("/api/registry/:address", (req, res) => {
+  const db = readRegistry();
+  const ids = db[req.params.address.toLowerCase()] || [];
+  res.json({ streamIds: ids });
+});

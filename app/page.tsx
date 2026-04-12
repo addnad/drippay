@@ -18,7 +18,7 @@ export default function HomePage() {
 
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-black pt-20">
         <div className="container mx-auto px-4">
-          <Card className="w-full h-[500px] bg-black/[0.96] relative overflow-hidden border border-white/10 rounded-2xl">
+          <Card className="w-full bg-black/[0.96] relative overflow-hidden border border-white/10 rounded-2xl">
             <div
               className="absolute -top-40 left-0 md:left-60 md:-top-20 pointer-events-none"
               style={{
@@ -27,48 +27,48 @@ export default function HomePage() {
                 height: "600px",
               }}
             />
-            <div className="flex h-full">
-              <div className="flex-1 p-10 relative z-10 flex flex-col justify-center">
-                <div className="inline-flex items-center gap-2 mb-6 px-3 py-1 rounded-full border border-blue-500/30 bg-blue-500/10 w-fit">
+            <div className="flex flex-col md:flex-row min-h-[420px] md:h-[500px]">
+              <div className="flex-1 p-6 md:p-10 relative z-10 flex flex-col justify-center">
+                <div className="inline-flex items-center gap-2 mb-4 md:mb-6 px-3 py-1 rounded-full border border-blue-500/30 bg-blue-500/10 w-fit">
                   <FlowraLogo size={14} />
                   <span className="text-xs text-blue-300 font-medium">Programmable Payments on Arc Network</span>
                 </div>
-                <h1 className="text-4xl md:text-5xl font-bold text-white bg-gradient-to-b from-neutral-50 to-neutral-400 bg-clip-text text-transparent">
+                <h1 className="text-3xl md:text-5xl font-bold text-white bg-gradient-to-b from-neutral-50 to-neutral-400 bg-clip-text text-transparent">
                   Meet Flowra —<br />Your Payment Agent
                 </h1>
-                <p className="mt-4 text-neutral-300 max-w-lg text-base leading-relaxed">
+                <p className="mt-3 md:mt-4 text-neutral-300 max-w-lg text-sm md:text-base leading-relaxed">
                   Flowra lets you stream USDC to anyone — drip by drip — with smart conditions
                   like location-gating. Perfect for allowances, payroll, milestones, and more.
                 </p>
-                <div className="flex flex-col sm:flex-row gap-4 mt-8">
+                <div className="flex flex-col sm:flex-row gap-3 mt-5 md:mt-8">
                   <a href="/create">
-                    <Button size="lg" className="bg-white text-black hover:bg-gray-100">
+                    <Button size="lg" className="bg-white text-black hover:bg-gray-100 w-full sm:w-auto">
                       Start with Flowra
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
                   </a>
                   <a href="/dashboard">
-                    <Button size="lg" variant="outline" className="border-neutral-600 text-neutral-300 hover:bg-neutral-800 bg-transparent">
+                    <Button size="lg" variant="outline" className="border-neutral-600 text-neutral-300 hover:bg-neutral-800 bg-transparent w-full sm:w-auto">
                       View Dashboard
                     </Button>
                   </a>
                 </div>
-                <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-8 text-sm text-neutral-400 mt-6">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-400" />
+                <div className="flex flex-row flex-wrap items-center gap-x-5 gap-y-2 text-xs md:text-sm text-neutral-400 mt-4 md:mt-6">
+                  <div className="flex items-center gap-1.5">
+                    <CheckCircle className="h-3.5 w-3.5 md:h-4 md:w-4 text-green-400" />
                     <span>No intermediaries</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-400" />
+                  <div className="flex items-center gap-1.5">
+                    <CheckCircle className="h-3.5 w-3.5 md:h-4 md:w-4 text-green-400" />
                     <span>Cancel anytime</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-400" />
+                  <div className="flex items-center gap-1.5">
+                    <CheckCircle className="h-3.5 w-3.5 md:h-4 md:w-4 text-green-400" />
                     <span>Location-aware</span>
                   </div>
                 </div>
               </div>
-              <div className="flex-1 relative w-full h-64 md:h-full">
+              <div className="hidden md:block md:flex-1 md:h-full relative">
                 <SplineScene
                   scene="https://prod.spline.design/UbM7F-HZcyTbZ4y3/scene.splinecode"
                   className="w-full h-full"

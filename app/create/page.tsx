@@ -89,33 +89,36 @@ export default function CreateStreamPage() {
       reset();
     } else if (step === "create") {
       toast.success("Flowra is now managing this payment.");
-      // Save stream metadata if proof condition
-      if (conditionMode === "proof") {
-        saveStreamMeta();
-      }
+      saveStreamMeta();
       setStep("done");
     }
   }, [isSuccess]);
 
   async function saveStreamMeta() {
-    if (!publicClient || !txHash) return;
+    if (!publicClient || !txHash || !address) return;
     try {
       const receipt = await publicClient.getTransactionReceipt({ hash: txHash as `0x${string}` });
       // StreamCreated event — streamId is the first indexed topic (topics[1])
       const log = receipt?.logs?.find(l => l.topics?.length >= 2);
       const streamId = log?.topics?.[1] ? BigInt(log.topics[1]).toString() : "0";
 
-      await fetch(`${BACKEND_URL}/api/stream-meta`, {
+      // Save stream meta if proof condition
+      if (conditionMode === "proof") {
+        await fetch(`${BACKEND_URL}/api/stream-meta`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ streamId, conditionMode, proofType, proofInstructions }),
+        });
+      }
+
+      // Always register stream ID for both sender and receiver wallets
+      await fetch(`${BACKEND_URL}/api/registry`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          streamId,
-          conditionMode,
-          proofType,
-          proofInstructions,
-        }),
+        body: JSON.stringify({ streamId, senderAddress: address, receiverAddress: receiver }),
       });
-      console.log("Stream meta saved for stream ID:", streamId);
+
+      console.log("Stream registered for ID:", streamId);
     } catch (e) { console.error("Failed to save stream meta:", e); }
   }
 

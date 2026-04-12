@@ -13,7 +13,7 @@ import {
 import { FlowraLogo } from "@/components/ui/logo";
 import { formatUsdc, timeRemaining, streamProgress, STATUS_LABELS, STATUS_COLORS } from "@/lib/utils";
 import { DRIPLY_ABI } from "@/lib/abi";
-import { DRIPLY_CONTRACT_ADDRESS } from "@/lib/wagmi";
+import { DRIPLY_CONTRACT_ADDRESS, BACKEND_URL } from "@/lib/wagmi";
 
 interface StreamData {
   id: bigint;
@@ -176,50 +176,28 @@ export default function DashboardPage() {
     if (!address || !publicClient) return;
     setLoading(true);
     try {
-      const latestBlock = await publicClient.getBlockNumber();
-      const CHUNK = 9999n;
-      const START_BLOCK = 35141291n;
-      const allLogs: any[] = [];
+      // Fetch stream IDs from registry instantly — no chain scanning
+      const regRes = await fetch(`${BACKEND_URL}/api/registry/${address}`);
+      const regData = await regRes.json();
+      const streamIds: string[] = regData.streamIds || [];
 
-      for (let from = START_BLOCK; from <= latestBlock; from += CHUNK) {
-        const to = from + CHUNK - 1n < latestBlock ? from + CHUNK - 1n : latestBlock;
-        const eventAbi = {
-          name: "StreamCreated", type: "event" as const,
-          inputs: [
-            { name: "streamId", type: "uint256", indexed: true },
-            { name: "sender", type: "address", indexed: true },
-            { name: "receiver", type: "address", indexed: true },
-            { name: "totalAmount", type: "uint256", indexed: false },
-            { name: "startTime", type: "uint256", indexed: false },
-            { name: "endTime", type: "uint256", indexed: false },
-            { name: "conditionType", type: "uint8", indexed: false },
-          ],
-        };
-        const [sentLogs, receivedLogs] = await Promise.all([
-          publicClient.getLogs({ address: DRIPLY_CONTRACT_ADDRESS, event: eventAbi, args: { sender: address as `0x${string}` }, fromBlock: from, toBlock: to }),
-          publicClient.getLogs({ address: DRIPLY_CONTRACT_ADDRESS, event: eventAbi, args: { receiver: address as `0x${string}` }, fromBlock: from, toBlock: to }),
-        ]);
-        allLogs.push(...sentLogs.map(l => ({ ...l, direction: "sent" as const })), ...receivedLogs.map(l => ({ ...l, direction: "received" as const })));
-      }
+      if (streamIds.length === 0) { setStreams([]); return; }
 
-      const seen = new Set<string>();
-      const unique = allLogs.filter(l => {
-        const id = (l.args?.streamId ?? "").toString();
-        if (seen.has(id)) return false;
-        seen.add(id); return true;
-      });
-
-      const enriched = await Promise.all(unique.map(async (log) => {
-        const streamId = log.args?.streamId as bigint;
+      // Enrich each stream ID with on-chain data
+      const enriched = await Promise.all(streamIds.map(async (idStr) => {
+        const streamId = BigInt(idStr);
         const [rawStream, claimable] = await Promise.all([
           publicClient.readContract({ address: DRIPLY_CONTRACT_ADDRESS, abi: DRIPLY_ABI, functionName: "getStream", args: [streamId] }),
           publicClient.readContract({ address: DRIPLY_CONTRACT_ADDRESS, abi: DRIPLY_ABI, functionName: "claimableAmount", args: [streamId] }),
         ]);
         const s = rawStream as any;
-        return { id: streamId, sender: s.sender, receiver: s.receiver, totalAmount: s.totalAmount, startTime: s.startTime, endTime: s.endTime, amountClaimed: s.amountClaimed, status: Number(s.status), conditionType: Number(s.conditionType), claimable: claimable as bigint, direction: log.direction } as StreamData;
+        if (s.sender === "0x0000000000000000000000000000000000000000") return null;
+        const isSender = s.sender.toLowerCase() === address.toLowerCase();
+        const direction = isSender ? "sent" as const : "received" as const;
+        return { id: streamId, sender: s.sender, receiver: s.receiver, totalAmount: s.totalAmount, startTime: s.startTime, endTime: s.endTime, amountClaimed: s.amountClaimed, status: Number(s.status), conditionType: Number(s.conditionType), claimable: claimable as bigint, direction } as StreamData;
       }));
 
-      setStreams(enriched.sort((a, b) => Number(b.startTime - a.startTime)));
+      setStreams(enriched.filter(Boolean).sort((a, b) => Number(b!.startTime - a!.startTime)) as StreamData[]);
     } catch (err) {
       console.error(err);
       toast.error("Failed to load streams.");

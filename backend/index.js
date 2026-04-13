@@ -9,6 +9,38 @@ const presence = require("./services/presence");
 const { validateProof } = require("./services/proofValidator");
 const steps = require("./services/steps");
 
+
+// ─── Upstash Redis helpers ────────────────────────────────────────────────────
+const REDIS_URL = process.env.UPSTASH_REDIS_REST_URL;
+const REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
+
+async function redisGet(key) {
+  try {
+    const res = await fetch(`${REDIS_URL}/get/${encodeURIComponent(key)}`, {
+      headers: { Authorization: `Bearer ${REDIS_TOKEN}` }
+    });
+    const data = await res.json();
+    return data.result ? JSON.parse(data.result) : null;
+  } catch { return null; }
+}
+
+async function redisSet(key, value) {
+  try {
+    await fetch(`${REDIS_URL}/set/${encodeURIComponent(key)}`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${REDIS_TOKEN}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ value: JSON.stringify(value) })
+    });
+  } catch (e) { console.error("Redis set error:", e); }
+}
+
+async function redisAppendToList(key, item) {
+  const existing = await redisGet(key) || [];
+  if (!existing.includes(item)) existing.push(item);
+  await redisSet(key, existing);
+  return existing;
+}
+
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: "10mb" }));

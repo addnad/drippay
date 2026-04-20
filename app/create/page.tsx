@@ -52,6 +52,7 @@ export default function CreateStreamPage() {
   const [conditionMode, setConditionMode] = useState<ConditionMode>("none");
   const [proofType, setProofType] = useState<"link" | "image">("link");
   const [proofInstructions, setProofInstructions] = useState("");
+  const [autoReview, setAutoReview] = useState(false);
   const [locationLat, setLocationLat] = useState(0);
   const [locationLon, setLocationLon] = useState(0);
   const [locationRadius, setLocationRadius] = useState(200);
@@ -108,7 +109,7 @@ export default function CreateStreamPage() {
         await fetch(`${BACKEND_URL}/api/stream-meta`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ streamId, conditionMode, proofType, proofInstructions }),
+          body: JSON.stringify({ streamId, conditionMode, proofType, proofInstructions, autoReview }),
         });
       }
 
@@ -352,6 +353,8 @@ export default function CreateStreamPage() {
               setProofType={setProofType}
               proofInstructions={proofInstructions}
               setProofInstructions={setProofInstructions}
+              autoReview={autoReview}
+              setAutoReview={setAutoReview}
               onLocationSelect={(lat, lon, radius, label) => {
                 setLocationLat(lat);
                 setLocationLon(lon);

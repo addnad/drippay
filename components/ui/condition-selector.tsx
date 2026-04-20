@@ -15,10 +15,12 @@ interface ConditionSelectorProps {
 
 export function ConditionSelector({
   conditionMode, setConditionMode, proofType, setProofType, onLocationSelect,
-  proofInstructions, setProofInstructions
+  proofInstructions, setProofInstructions, autoReview, setAutoReview
 }: ConditionSelectorProps & {
   proofInstructions?: string;
   setProofInstructions?: (v: string) => void;
+  autoReview?: boolean;
+  setAutoReview?: (v: boolean) => void;
 }) {
   return (
     <div className="space-y-4">
@@ -102,6 +104,21 @@ export function ConditionSelector({
               This tells the receiver exactly what to submit. Flowra can also review submissions against these instructions.
             </p>
           </div>
+
+          {proofType === "link" && (
+            <div className="flex items-center justify-between p-3 bg-white/5 border border-white/10 rounded-xl">
+              <div>
+                <p className="text-xs text-white font-medium">Let Flowra review link submissions</p>
+                <p className="text-xs text-gray-500 mt-0.5">Flowra will automatically approve or reject based on your instructions</p>
+              </div>
+              <button
+                onClick={() => setAutoReview?.(!autoReview)}
+                className={`relative w-11 h-6 rounded-full transition-colors ${autoReview ? "bg-violet-600" : "bg-white/10"}`}
+              >
+                <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform ${autoReview ? "translate-x-5" : "translate-x-0"}`} />
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

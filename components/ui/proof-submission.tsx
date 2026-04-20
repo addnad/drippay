@@ -14,7 +14,7 @@ interface ProofSubmissionProps {
 }
 interface ProofData {
   proofType: string; proofContent: string; proofNote: string;
-  status: "pending" | "approved" | "rejected";
+  status: "pending" | "approved" | "rejected" | "reviewed";
   aiVerdict: { verdict: string; confidence: string; reason: string } | null;
   senderNote: string; timestamp: number;
 }
@@ -123,7 +123,21 @@ export function ProofSubmission({ streamId, isReceiver, isSender, streamStatus, 
   if (streamStatus !== 0) return null;
 
   return (
-    <div className="bg-[#0d0d0d] border border-white/10 rounded-2xl mt-4 p-5">
+    <div className="bg-[#0d0d0d] border border-white/10 rounded-2xl mt-4 p-5 relative overflow-hidden">
+      <div className="absolute inset-0 pointer-events-none">
+        <svg className="absolute inset-0 w-full h-full opacity-[0.06]" viewBox="0 0 400 300" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="20" y="40" width="16" height="60" rx="4" fill="#3b82f6" opacity="0.5"/>
+          <rect x="45" y="25" width="16" height="75" rx="4" fill="#3b82f6" opacity="0.6"/>
+          <rect x="70" y="50" width="16" height="50" rx="4" fill="#3b82f6" opacity="0.4"/>
+          <rect x="95" y="30" width="16" height="70" rx="4" fill="#3b82f6" opacity="0.7"/>
+          <rect x="120" y="15" width="16" height="85" rx="4" fill="#7c3aed" opacity="0.9"/>
+          <path d="M200 200 L240 140 L280 170 L320 110 L360 130" stroke="#7c3aed" strokeWidth="1.5" fill="none" strokeLinecap="round"/>
+          <circle cx="240" cy="140" r="3" fill="#7c3aed"/>
+          <circle cx="320" cy="110" r="3" fill="#3b82f6"/>
+        </svg>
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-950/30 to-violet-950/30"/>
+      </div>
+      <div className="relative">
       <p className="text-gray-500 text-xs uppercase tracking-wider mb-4">Proof of Work</p>
       {meta?.proofInstructions && (
         <div className="p-3 bg-white/5 border border-white/10 rounded-xl mb-4">
@@ -197,7 +211,7 @@ export function ProofSubmission({ streamId, isReceiver, isSender, streamStatus, 
           </button>
         </div>
       )}
-      {isReceiver && proof?.status === "pending" && (
+      {isReceiver && (proof?.status === "pending" || proof?.status === "reviewed") && (
         <div className="text-center py-4">
           <div className="w-2 h-2 rounded-full bg-yellow-400 animate-pulse mx-auto mb-3" />
           <p className="text-yellow-400 text-sm font-medium">Flowra is reviewing your submission…</p>
@@ -229,7 +243,7 @@ export function ProofSubmission({ streamId, isReceiver, isSender, streamStatus, 
           <p className="text-gray-500 text-sm">Waiting for receiver to submit proof</p>
         </div>
       )}
-      {isSender && proof?.status === "pending" && (
+      {isSender && (proof?.status === "pending" || proof?.status === "reviewed") && (
         <div className="space-y-4">
           <div className="p-3 bg-white/5 border border-white/10 rounded-xl">
             <p className="text-gray-500 text-xs mb-1">Submitted {proof.proofType}</p>
@@ -256,6 +270,7 @@ export function ProofSubmission({ streamId, isReceiver, isSender, streamStatus, 
       {isSender && proof?.status === "rejected" && (
         <div className="text-center py-4"><XCircle className="w-8 h-8 text-red-400 mx-auto mb-3" /><p className="text-red-400 text-sm font-medium">You rejected this proof</p></div>
       )}
+      </div>
     </div>
   );
 }

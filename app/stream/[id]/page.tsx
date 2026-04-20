@@ -70,12 +70,21 @@ export default function StreamDetailPage() {
   const [submittingUnlock, setSubmittingUnlock] = useState(false);
   const [presenceStatus, setPresenceStatus] = useState<{ timeInZoneMs: number; requiredDurationMs: number; remainingMs: number; met: boolean } | null>(null);
   const [stepData, setStepData] = useState<{ id: string; status: string; completedAt: number | null }[] | null>(null);
+  const [proofStatus, setProofStatus] = useState<string | null>(null);
 
   async function fetchStreamMeta() {
     try {
       const res = await fetch(`${BACKEND_URL}/api/stream-meta/${id}`);
       const data = await res.json();
       if (data.meta) setStreamMeta(data.meta);
+    } catch (e) { console.error(e); }
+  }
+
+  async function fetchProofStatus() {
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/proof-submit/${id}`);
+      const data = await res.json();
+      if (data.proof) setProofStatus(data.proof.status);
     } catch (e) { console.error(e); }
   }
 
@@ -346,7 +355,7 @@ export default function StreamDetailPage() {
         {isReceiver && stream.status === 0 && (
           <button onClick={handleClaim} disabled={isLoading || claimable === 0n || (stream.conditionType === 1 && !locationVerif.signature)} className="w-full py-4 rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 text-white font-semibold text-base hover:opacity-90 transition-opacity disabled:opacity-40 flex items-center justify-center gap-2 mb-4">
             {isLoading && <Loader2 className="w-5 h-5 animate-spin" />}
-            {isLoading ? "Processing…" : claimable === 0n ? "Flowra has not unlocked funds yet" : stream.conditionType === 1 && !locationVerif.signature ? "Ask Flowra to verify your location first" : `Flowra: Claim ${formatUsdc(claimable)}`}
+            {isLoading ? "Processing…" : claimable === 0n && streamMeta?.conditionMode === "proof" && proofStatus !== "approved" ? "Submit proof to unlock funds" : claimable === 0n ? "Flowra has not unlocked funds yet" : stream.conditionType === 1 && !locationVerif.signature ? "Ask Flowra to verify your location first" : `Flowra: Claim ${formatUsdc(claimable)}`}
           </button>
         )}
 

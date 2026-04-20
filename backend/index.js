@@ -2,8 +2,7 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const { ethers } = require("ethers");
-const fs = require("fs");
-const path = require("path");
+
 
 const presence = require("./services/presence");
 const { validateProof } = require("./services/proofValidator");
@@ -57,11 +56,14 @@ const CHAIN_ID = process.env.CHAIN_ID || 5042002;
 const signer = new ethers.Wallet(BACKEND_SIGNER_PRIVATE_KEY);
 console.log("Backend signer address:", signer.address);
 
-const DB_PATH = path.join(__dirname, "db.json");
-function readDB() { if (!fs.existsSync(DB_PATH)) return { streamNonces: {}, unlockRequests: {}, proofSubmissions: {} }; return JSON.parse(fs.readFileSync(DB_PATH, "utf8")); }
-function writeDB(data) { fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2)); }
-function getNonce(streamId) { const db = readDB(); return db.streamNonces[streamId] ?? 0; }
-function incrementNonce(streamId) { const db = readDB(); db.streamNonces[streamId] = (db.streamNonces[streamId] ?? 0) + 1; writeDB(db); }
+async function getNonce(streamId) {
+  const val = await redisGet("nonce:" + streamId);
+  return val ?? 0;
+}
+async function incrementNonce(streamId) {
+  const current = await getNonce(streamId);
+  await redisSet("nonce:" + streamId, current + 1);
+}
 
 function haversineDistance(lat1, lon1, lat2, lon2) {
   const R = 6371000, toRad = d => d * Math.PI / 180;
@@ -105,7 +107,7 @@ app.post("/api/verify-location", async (req, res) => {
     return res.json({ allowed: false, distanceMeters: Math.round(distance), signature: null, message: `Location verified. Complete next step: ${next?.id || "unknown"}.`, presenceStatus, steps: streamSteps.steps });
   }
 
-  const nonce = getNonce(streamId);
+  const nonce = await getNonce(streamId);
   const messageHash = ethers.solidityPackedKeccak256(["uint256", "address", "uint256", "uint256"], [streamId, receiverAddress, nonce, CHAIN_ID]);
   const signature = await signer.signMessage(ethers.getBytes(messageHash));
   incrementNonce(streamId);
@@ -129,25 +131,23 @@ app.post("/api/steps/init", (req, res) => {
 
 app.get("/api/steps/:streamId", (req, res) => res.json({ steps: steps.getSteps(req.params.streamId) }));
 
-app.post("/api/unlock-request", (req, res) => {
+app.post("/api/unlock-request", async (req, res) => {
   const { streamId, receiverAddress, note, message, percentage } = req.body;
   if (!streamId || !receiverAddress) return res.status(400).json({ error: "Missing fields" });
-  const db = readDB();
-  if (!db.unlockRequests) db.unlockRequests = {};
-  db.unlockRequests[streamId] = { streamId, receiverAddress, note: note || "", message: message || "", percentage: percentage || 100, status: "pending", timestamp: Date.now() };
-  writeDB(db);
-  res.json({ success: true, request: db.unlockRequests[streamId] });
+  const request = { streamId, receiverAddress, note: note || "", message: message || "", percentage: percentage || 100, status: "pending", timestamp: Date.now() };
+  await redisSet("unlockRequest:" + streamId, request);
+  res.json({ success: true, request });
 });
 
-app.get("/api/unlock-request/:streamId", (req, res) => { const db = readDB(); res.json({ request: db.unlockRequests?.[req.params.streamId] || null }); });
+app.get("/api/unlock-request/:streamId", async (req, res) => { const request = await redisGet("unlockRequest:" + req.params.streamId); res.json({ request: request || null }); });
 
-app.post("/api/unlock-request/:streamId/:action", (req, res) => {
+app.post("/api/unlock-request/:streamId/:action", async (req, res) => {
   const { streamId, action } = req.params;
   if (!["approve", "reject"].includes(action)) return res.status(400).json({ error: "Invalid action" });
-  const db = readDB();
-  if (!db.unlockRequests?.[streamId]) return res.status(404).json({ error: "No request found" });
-  db.unlockRequests[streamId].status = action === "approve" ? "approved" : "rejected";
-  writeDB(db);
+  const request = await redisGet("unlockRequest:" + streamId);
+  if (!request) return res.status(404).json({ error: "No request found" });
+  request.status = action === "approve" ? "approved" : "rejected";
+  await redisSet("unlockRequest:" + streamId, request);
   res.json({ success: true });
 });
 
@@ -160,54 +160,79 @@ app.post("/api/proof-submit", async (req, res) => {
     if (!validation.valid) return res.status(422).json({ error: validation.reason, stale: true });
   }
 
-  const db = readDB();
-  if (!db.proofSubmissions) db.proofSubmissions = {};
-  db.proofSubmissions[streamId] = { streamId, receiverAddress, proofType, proofContent, proofNote: proofNote || "", capturedAt: capturedAt || null, captureLocation: captureLocation || null, status: "pending", aiVerdict: null, senderNote: "", timestamp: Date.now() };
-  writeDB(db);
+  const proofData = { streamId, receiverAddress, proofType, proofContent, proofNote: proofNote || "", capturedAt: capturedAt || null, captureLocation: captureLocation || null, status: "pending", aiVerdict: null, senderNote: "", timestamp: Date.now() };
+  await redisSet("proof:" + streamId, proofData);
 
   console.log(`Proof submitted for stream ${streamId} - triggering Flowra...`);
   await triggerFlowraVerification(streamId);
 
-  const updatedProof = readDB().proofSubmissions[streamId];
+  const updatedProof = await redisGet("proof:" + streamId);
   if (updatedProof.aiVerdict === "approved" && steps.getSteps(streamId)) steps.completeStep(streamId, "proof");
 
   res.json({ success: true, proof: updatedProof });
 });
 
+const { reviewLinkProof } = require("./services/aiReviewer");
+
 async function triggerFlowraVerification(streamId) {
-  const db = readDB(); const proof = db.proofSubmissions[streamId]; if (!proof) return;
-  // capture proofs require manual sender review — leave as pending
+  const proof = await redisGet("proof:" + streamId); if (!proof) return;
+
+  // capture/gallery proofs always require manual sender review
   if (proof.proofType === "capture") {
     proof.aiVerdict = null; proof.status = "pending"; proof.senderNote = "";
-    writeDB(db);
+    await redisSet("proof:" + streamId, proof);
     console.log("Flowra: capture proof for " + streamId + " awaiting sender review");
     return;
   }
-  let reason = "Auto-approved";
-  if (proof.proofType === "link" && proof.proofContent.includes("github.com")) reason = "Detected GitHub proof";
-  else if (proof.proofType === "file" && proof.proofContent.endsWith(".zip")) reason = "Detected ZIP file proof";
-  else if (proof.proofType === "text" && proof.proofContent.length > 0) reason = "Detected text proof";
-  proof.aiVerdict = "approved"; proof.status = "reviewed"; proof.senderNote = reason;
-  writeDB(db);
-  console.log(`Flowra verdict for ${streamId}:`, proof.aiVerdict, "—", reason);
+
+  // check if sender enabled auto-review for this stream
+  const meta = await redisGet("meta:" + streamId);
+  const autoReview = meta?.autoReview === true;
+
+  if (!autoReview) {
+    // manual review — leave as pending for sender
+    proof.status = "pending"; proof.aiVerdict = null; proof.senderNote = "";
+    await redisSet("proof:" + streamId, proof);
+    console.log("Flowra: proof for " + streamId + " awaiting manual sender review");
+    return;
+  }
+
+  // auto-review with AI for link proofs
+  if (proof.proofType === "link") {
+    try {
+      const aiResult = await reviewLinkProof(meta?.proofInstructions || "Submit proof of work", proof.proofContent);
+      proof.aiVerdict = aiResult.verdict;
+      proof.status = aiResult.verdict === "approved" ? "approved" : "rejected";
+      proof.senderNote = aiResult.reason || "Reviewed by Flowra";
+    } catch (e) {
+      console.error("AI review failed:", e.message);
+      proof.status = "pending"; proof.aiVerdict = null; proof.senderNote = "";
+    }
+  } else {
+    // text/file proofs with auto-review — approve automatically
+    proof.aiVerdict = "approved"; proof.status = "approved"; proof.senderNote = "Approved by Flowra";
+  }
+
+  await redisSet("proof:" + streamId, proof);
+  console.log(`Flowra verdict for ${streamId}:`, proof.status, "—", proof.senderNote);
 }
 
-app.get("/api/proof-submit/:streamId", (req, res) => { const db = readDB(); res.json({ proof: db.proofSubmissions?.[req.params.streamId] || null }); });
+app.get("/api/proof-submit/:streamId", async (req, res) => { const proof = await redisGet("proof:" + req.params.streamId); res.json({ proof: proof || null }); });
 
-app.post("/api/proof-submit/:streamId/approve", (req, res) => {
-  const db = readDB(); const proof = db.proofSubmissions?.[req.params.streamId];
+app.post("/api/proof-submit/:streamId/approve", async (req, res) => {
+  const proof = await redisGet("proof:" + req.params.streamId);
   if (!proof) return res.status(404).json({ error: "No proof found" });
   proof.status = "approved"; proof.aiVerdict = "approved"; proof.senderNote = req.body.senderNote || "Approved by sender";
-  writeDB(db);
+  await redisSet("proof:" + req.params.streamId, proof);
   if (steps.getSteps(req.params.streamId)) steps.completeStep(req.params.streamId, "proof");
   res.json({ success: true });
 });
 
-app.post("/api/proof-submit/:streamId/reject", (req, res) => {
-  const db = readDB(); const proof = db.proofSubmissions?.[req.params.streamId];
+app.post("/api/proof-submit/:streamId/reject", async (req, res) => {
+  const proof = await redisGet("proof:" + req.params.streamId);
   if (!proof) return res.status(404).json({ error: "No proof found" });
   proof.status = "rejected"; proof.aiVerdict = "rejected"; proof.senderNote = req.body.senderNote || "Rejected by sender";
-  writeDB(db);
+  await redisSet("proof:" + req.params.streamId, proof);
   if (steps.getSteps(req.params.streamId)) steps.failStep(req.params.streamId, "proof");
   res.json({ success: true });
 });
@@ -233,49 +258,44 @@ app.get("/api/stream-cache", (req, res) => {
 
 // ─── Option C: Stream registry by wallet address ──────────────────────────────
 // Stores stream IDs per wallet so dashboard never scans the chain.
-const REGISTRY_PATH = require("path").join(__dirname, "registry.json");
-function readRegistry() { if (!require("fs").existsSync(REGISTRY_PATH)) return {}; return JSON.parse(require("fs").readFileSync(REGISTRY_PATH, "utf8")); }
-function writeRegistry(data) { require("fs").writeFileSync(REGISTRY_PATH, JSON.stringify(data, null, 2)); }
+
 
 // Called after stream creation — stores streamId for both sender and receiver
-app.post("/api/registry", (req, res) => {
+app.post("/api/registry", async (req, res) => {
   const { streamId, senderAddress, receiverAddress } = req.body;
   if (!streamId || !senderAddress || !receiverAddress) return res.status(400).json({ error: "Missing fields" });
-  const db = readRegistry();
   const sender = senderAddress.toLowerCase();
   const receiver = receiverAddress.toLowerCase();
-  if (!db[sender]) db[sender] = [];
-  if (!db[receiver]) db[receiver] = [];
-  if (!db[sender].includes(streamId.toString())) db[sender].push(streamId.toString());
-  if (!db[receiver].includes(streamId.toString())) db[receiver].push(streamId.toString());
-  writeRegistry(db);
+  const sid = streamId.toString();
+  const senderIds = await redisGet("registry:" + sender) || [];
+  const receiverIds = await redisGet("registry:" + receiver) || [];
+  if (!senderIds.includes(sid)) senderIds.push(sid);
+  if (!receiverIds.includes(sid)) receiverIds.push(sid);
+  await redisSet("registry:" + sender, senderIds);
+  await redisSet("registry:" + receiver, receiverIds);
   res.json({ success: true });
 });
 
 // Called by dashboard — returns all stream IDs for a wallet instantly
-app.get("/api/registry/:address", (req, res) => {
-  const db = readRegistry();
-  const ids = db[req.params.address.toLowerCase()] || [];
+app.get("/api/registry/:address", async (req, res) => {
+  const ids = await redisGet("registry:" + req.params.address.toLowerCase()) || [];
   res.json({ streamIds: ids });
 });
 
 // ─── Stream meta (proof instructions) ────────────────────────────────────────
-const META_PATH = require("path").join(__dirname, "stream-meta.json");
-function readMeta() { if (!require("fs").existsSync(META_PATH)) return {}; return JSON.parse(require("fs").readFileSync(META_PATH, "utf8")); }
-function writeMeta(data) { require("fs").writeFileSync(META_PATH, JSON.stringify(data, null, 2)); }
 
-app.post("/api/stream-meta", (req, res) => {
-  const { streamId, conditionMode, proofType, proofInstructions } = req.body;
+
+app.post("/api/stream-meta", async (req, res) => {
+  const { streamId, conditionMode, proofType, proofInstructions, autoReview } = req.body;
   if (!streamId) return res.status(400).json({ error: "Missing streamId" });
-  const db = readMeta();
-  db[streamId] = { streamId, conditionMode, proofType, proofInstructions, timestamp: Date.now() };
-  writeMeta(db);
-  res.json({ success: true, meta: db[streamId] });
+  const meta = { streamId, conditionMode, proofType, proofInstructions, autoReview: autoReview === true, timestamp: Date.now() };
+  await redisSet("meta:" + streamId, meta);
+  res.json({ success: true, meta });
 });
 
-app.get("/api/stream-meta/:streamId", (req, res) => {
-  const db = readMeta();
-  res.json({ meta: db[req.params.streamId] || null });
+app.get("/api/stream-meta/:streamId", async (req, res) => {
+  const meta = await redisGet("meta:" + req.params.streamId);
+  res.json({ meta: meta || null });
 });
 
 // ─── Circle API Services ──────────────────────────────────────────────────────

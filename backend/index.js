@@ -237,6 +237,18 @@ app.post("/api/proof-submit/:streamId/reject", async (req, res) => {
   res.json({ success: true });
 });
 
+
+// Temporary Redis debug endpoint
+app.get("/api/debug/redis", async (req, res) => {
+  try {
+    await redisSet("debug:test", { ok: true, time: Date.now() });
+    const val = await redisGet("debug:test");
+    res.json({ write: "ok", read: val });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get("/health", (_, res) => res.json({ status: "ok", signer: signer.address }));
 app.listen(PORT, () => console.log(`Flowra backend running on http://localhost:${PORT}`));
 

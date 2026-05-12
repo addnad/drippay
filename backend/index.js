@@ -110,7 +110,7 @@ app.post("/api/verify-location", async (req, res) => {
   const nonce = await getNonce(streamId);
   const messageHash = ethers.solidityPackedKeccak256(["uint256", "address", "uint256", "uint256"], [streamId, receiverAddress, nonce, CHAIN_ID]);
   const signature = await signer.signMessage(ethers.getBytes(messageHash));
-  incrementNonce(streamId);
+  await incrementNonce(streamId);
 
   res.json({ allowed: true, distanceMeters: Math.round(distance), signature, message: "Location verified. You can claim your funds.", presenceStatus, steps: streamSteps?.steps || null });
 });
@@ -120,7 +120,7 @@ app.get("/api/presence/:streamId/:receiverAddress", (req, res) => {
   res.json({ presence: presence.getPresence(streamId, receiverAddress) });
 });
 
-app.get("/api/stream-nonce/:streamId", (req, res) => res.json({ nonce: getNonce(parseInt(req.params.streamId)) }));
+app.get("/api/stream-nonce/:streamId", async (req, res) => { const nonce = await getNonce(parseInt(req.params.streamId)); res.json({ nonce }); });
 
 app.post("/api/steps/init", (req, res) => {
   const { streamId, stepIds, config } = req.body;
@@ -241,11 +241,17 @@ app.post("/api/proof-submit/:streamId/reject", async (req, res) => {
 // Temporary Redis debug endpoint
 app.get("/api/debug/redis", async (req, res) => {
   try {
-    await redisSet("debug:test", { ok: true, time: Date.now() });
+    const testVal = { ok: true, time: Date.now() };
+    await redisSet("debug:test", testVal);
+    // Direct raw Redis read to bypass redisGet wrapper
+    const rawRes = await fetch(`${REDIS_URL}/get/${encodeURIComponent("debug:test")}`, {
+      headers: { Authorization: `Bearer ${REDIS_TOKEN}` }
+    });
+    const rawData = await rawRes.json();
     const val = await redisGet("debug:test");
-    res.json({ write: "ok", read: val });
+    res.json({ write: "ok", read: val, raw: rawData, url_set: !!REDIS_URL, token_set: !!REDIS_TOKEN });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    res.status(500).json({ error: e.message, stack: e.stack });
   }
 });
 
@@ -376,9 +382,9 @@ app.post("/api/withdraw", async (req, res) => {
     if (!userId || !toAddress || !amount) return res.status(400).json({ error: "Missing fields" });
     const walletRecord = await redisGet(`wallet:${userId.toLowerCase()}`);
     if (!walletRecord) return res.status(404).json({ error: "Wallet not found" });
-    await ledgerService.debit(userId, amount, redisGet, redisSet);
     const walletData = walletRecord.value ? JSON.parse(walletRecord.value) : walletRecord;
     const transfer = await paymentService.withdraw(walletData.id, toAddress, amount);
+    await ledgerService.debit(userId, amount, redisGet, redisSet);
     res.json({ success: true, transfer });
   } catch (e) {
     console.error("Withdraw error:", e);

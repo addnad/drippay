@@ -4,7 +4,10 @@ const fs = require("fs");
 
 async function main() {
   const apiKey = process.env.CIRCLE_API_KEY;
-  const entitySecret = "3255635d45240553880f0372e7fb68f164352b31693c8f14bda10ed86e6fa070";
+  const entitySecret = process.env.CIRCLE_ENTITY_SECRET;
+
+  if (!apiKey) throw new Error("Missing CIRCLE_API_KEY in .env");
+  if (!entitySecret) throw new Error("Missing CIRCLE_ENTITY_SECRET in .env");
 
   console.log("Registering Entity Secret with Circle...");
   const response = await registerEntitySecretCiphertext({ apiKey, entitySecret });
@@ -15,14 +18,7 @@ async function main() {
     console.log("Recovery file saved to: circle-recovery.dat");
   }
 
-  const envContent = fs.readFileSync(".env", "utf8");
-  const updated = envContent.replace(
-    /CIRCLE_ENTITY_SECRET=.*/,
-    `CIRCLE_ENTITY_SECRET=${entitySecret}`
-  );
-  fs.writeFileSync(".env", updated);
-  console.log("CIRCLE_ENTITY_SECRET written to .env");
-  console.log("Done!");
+  console.log("Done! CIRCLE_ENTITY_SECRET is already set in .env");
 }
 
 main().catch(console.error);

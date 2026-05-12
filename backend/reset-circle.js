@@ -5,8 +5,10 @@ const https = require("https");
 
 async function main() {
   const apiKey = process.env.CIRCLE_API_KEY;
-  const newEntitySecret = "3255635d45240553880f0372e7fb68f164352b31693c8f14bda10ed86e6fa070";
-  const recoveryFile = fs.readFileSync("/Users/mac/circle-setup/recovery/recovery_file_1771862097470.dat", "utf8").trim();
+  const newEntitySecret = process.env.CIRCLE_ENTITY_SECRET;
+  const recoveryFilePath = process.env.CIRCLE_RECOVERY_FILE_PATH;
+  if (!recoveryFilePath) throw new Error("Missing CIRCLE_RECOVERY_FILE_PATH in .env");
+  const recoveryFile = fs.readFileSync(recoveryFilePath, "utf8").trim();
 
   console.log("Generating new ciphertext...");
   const ciphertext = await generateEntitySecretCiphertext({ apiKey, entitySecret: newEntitySecret });
@@ -46,9 +48,6 @@ async function main() {
     const parsed = JSON.parse(result.body);
     const newRecovery = parsed.data?.recoveryFile;
     if (newRecovery) fs.writeFileSync("circle-recovery-new.dat", newRecovery);
-    const envContent = fs.readFileSync(".env", "utf8");
-    const updated = envContent.replace(/CIRCLE_ENTITY_SECRET=.*/, `CIRCLE_ENTITY_SECRET=${newEntitySecret}`);
-    fs.writeFileSync(".env", updated);
     console.log("Done! Entity secret reset successfully.");
   }
 }

@@ -48,6 +48,15 @@ async function redisAppendToList(key, item) {
 
 const app = express();
 app.use(cors());
+app.use((req, res, next) => {
+  if (req.path === "/api/webhooks/circle") {
+    let raw = "";
+    req.on("data", chunk => raw += chunk);
+    req.on("end", () => { req.rawBody = raw; next(); });
+  } else {
+    next();
+  }
+});
 app.use(express.json({ limit: "10mb" }));
 
 // ─── Auth endpoints ──────────────────────────────────────────────────────────
@@ -406,7 +415,10 @@ app.post("/api/withdraw", requireAuth, async (req, res) => {
 // POST /api/webhooks/circle
 app.post("/api/webhooks/circle", async (req, res) => {
   try {
-    const result = await handleCircleWebhook(req.body, redisGet, redisSet);
+    const signature = req.headers["x-circle-signature"] || "";
+    const result = await handleCircleWebhook(req.rawBody || JSON.stringify(req.body), signature, redisGet, redisSet);
+    if (result.status === 401) return res.status(401).json({ error: result.error });
+    if (result.status === 400) return res.status(400).json({ error: result.error });
     res.json({ success: true, result });
   } catch (e) {
     console.error("Webhook error:", e);

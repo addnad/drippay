@@ -4,8 +4,9 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract DriplyStreams is ReentrancyGuard {
+contract DriplyStreams is ReentrancyGuard, Ownable {
     using SafeERC20 for IERC20;
 
     enum ConditionType { NONE, LOCATION }
@@ -38,8 +39,9 @@ contract DriplyStreams is ReentrancyGuard {
     event StreamResumed(uint256 indexed streamId);
     event StreamCancelled(uint256 indexed streamId, uint256 refundToSender, uint256 keptByReceiver);
     event EmergencyUnlocked(uint256 indexed streamId, uint256 amount, uint256 percentage);
+    event BackendSignerUpdated(address indexed oldSigner, address indexed newSigner);
 
-    constructor(address _backendSigner) {
+    constructor(address _backendSigner) Ownable(msg.sender) {
         backendSigner = _backendSigner;
     }
 
@@ -209,7 +211,9 @@ contract DriplyStreams is ReentrancyGuard {
         return ecrecover(hash, v, r, sv);
     }
 
-    function updateBackendSigner(address newSigner) external {
+    function updateBackendSigner(address newSigner) external onlyOwner {
+        require(newSigner != address(0), "Invalid signer address");
+        emit BackendSignerUpdated(backendSigner, newSigner);
         backendSigner = newSigner;
     }
 }

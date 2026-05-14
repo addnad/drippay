@@ -81,29 +81,29 @@ app.post("/api/verify-location", async (req, res) => {
   const insideZone = distance <= radiusMeters;
 
   if (!insideZone) {
-    presence.recordExit(streamId, receiverAddress);
-    if (steps.getSteps(streamId)) { steps.failStep(streamId, "location"); steps.resetStepAndAfter(streamId, "presence"); }
+    await presence.recordExit(streamId, receiverAddress, redisGet, redisSet);
+    if (await steps.getSteps(streamId, redisGet)) { await steps.failStep(streamId, "location", redisGet, redisSet); await steps.resetStepAndAfter(streamId, "presence", redisGet, redisSet); }
     return res.json({ allowed: false, distanceMeters: Math.round(distance), signature: null, message: `You are ${Math.round(distance)}m away. Must be within ${radiusMeters}m.`, presenceStatus: null });
   }
 
-  presence.recordCheckIn(streamId, receiverAddress);
-  if (steps.getSteps(streamId)) steps.completeStep(streamId, "location");
+  await presence.recordCheckIn(streamId, receiverAddress, redisGet, redisSet);
+  if (await steps.getSteps(streamId, redisGet)) await steps.completeStep(streamId, "location", redisGet, redisSet);
 
   const durationRequired = requiredDurationMs && requiredDurationMs > 0;
   let presenceStatus = null;
 
   if (durationRequired) {
-    const presenceCheck = presence.checkPresenceDuration(streamId, receiverAddress, requiredDurationMs);
+    const presenceCheck = await presence.checkPresenceDuration(streamId, receiverAddress, requiredDurationMs, redisGet);
     presenceStatus = { timeInZoneMs: presenceCheck.timeInZoneMs, requiredDurationMs, remainingMs: presenceCheck.remainingMs, met: presenceCheck.met };
     if (!presenceCheck.met) {
       return res.json({ allowed: false, distanceMeters: Math.round(distance), signature: null, message: `Inside zone. Stay for ${Math.round(presenceCheck.remainingMs / 1000)}s more.`, presenceStatus });
     }
-    if (steps.getSteps(streamId)) steps.completeStep(streamId, "presence");
+    if (await steps.getSteps(streamId, redisGet)) await steps.completeStep(streamId, "presence", redisGet, redisSet);
   }
 
-  const streamSteps = steps.getSteps(streamId);
-  if (streamSteps && !steps.allStepsComplete(streamId)) {
-    const next = steps.nextPendingStep(streamId);
+  const streamSteps = await steps.getSteps(streamId, redisGet);
+  if (streamSteps && !await steps.allStepsComplete(streamId, redisGet)) {
+    const next = await steps.nextPendingStep(streamId, redisGet);
     return res.json({ allowed: false, distanceMeters: Math.round(distance), signature: null, message: `Location verified. Complete next step: ${next?.id || "unknown"}.`, presenceStatus, steps: streamSteps.steps });
   }
 
@@ -115,21 +115,21 @@ app.post("/api/verify-location", async (req, res) => {
   res.json({ allowed: true, distanceMeters: Math.round(distance), signature, message: "Location verified. You can claim your funds.", presenceStatus, steps: streamSteps?.steps || null });
 });
 
-app.get("/api/presence/:streamId/:receiverAddress", (req, res) => {
+app.get("/api/presence/:streamId/:receiverAddress", async (req, res) => {
   const { streamId, receiverAddress } = req.params;
-  res.json({ presence: presence.getPresence(streamId, receiverAddress) });
+  res.json({ presence: await presence.getPresence(streamId, receiverAddress, redisGet) });
 });
 
 app.get("/api/stream-nonce/:streamId", async (req, res) => { const nonce = await getNonce(parseInt(req.params.streamId)); res.json({ nonce }); });
 
-app.post("/api/steps/init", (req, res) => {
+app.post("/api/steps/init", async (req, res) => {
   const { streamId, stepIds, config } = req.body;
   if (!streamId || !stepIds || !Array.isArray(stepIds)) return res.status(400).json({ error: "Missing streamId or stepIds array" });
-  const result = steps.initSteps(streamId, stepIds, config || {});
+  const result = await steps.initSteps(streamId, stepIds, config || {}, redisGet, redisSet);
   res.json({ success: true, steps: result });
 });
 
-app.get("/api/steps/:streamId", (req, res) => res.json({ steps: steps.getSteps(req.params.streamId) }));
+app.get("/api/steps/:streamId", async (req, res) => res.json({ steps: await steps.getSteps(req.params.streamId, redisGet) }));
 
 app.post("/api/unlock-request", async (req, res) => {
   const { streamId, receiverAddress, note, message, percentage } = req.body;
@@ -167,7 +167,7 @@ app.post("/api/proof-submit", async (req, res) => {
   await triggerFlowraVerification(streamId);
 
   const updatedProof = await redisGet("proof:" + streamId);
-  if (updatedProof.aiVerdict === "approved" && steps.getSteps(streamId)) steps.completeStep(streamId, "proof");
+  if (updatedProof.aiVerdict === "approved" && await steps.getSteps(streamId, redisGet)) await steps.completeStep(streamId, "proof", redisGet, redisSet);
 
   res.json({ success: true, proof: updatedProof });
 });
@@ -224,7 +224,7 @@ app.post("/api/proof-submit/:streamId/approve", async (req, res) => {
   if (!proof) return res.status(404).json({ error: "No proof found" });
   proof.status = "approved"; proof.aiVerdict = "approved"; proof.senderNote = req.body.senderNote || "Approved by sender";
   await redisSet("proof:" + req.params.streamId, proof);
-  if (steps.getSteps(req.params.streamId)) steps.completeStep(req.params.streamId, "proof");
+  if (await steps.getSteps(req.params.streamId, redisGet)) await steps.completeStep(req.params.streamId, "proof", redisGet, redisSet);
   res.json({ success: true });
 });
 
@@ -233,7 +233,7 @@ app.post("/api/proof-submit/:streamId/reject", async (req, res) => {
   if (!proof) return res.status(404).json({ error: "No proof found" });
   proof.status = "rejected"; proof.aiVerdict = "rejected"; proof.senderNote = req.body.senderNote || "Rejected by sender";
   await redisSet("proof:" + req.params.streamId, proof);
-  if (steps.getSteps(req.params.streamId)) steps.failStep(req.params.streamId, "proof");
+  if (await steps.getSteps(req.params.streamId, redisGet)) await steps.failStep(req.params.streamId, "proof", redisGet, redisSet);
   res.json({ success: true });
 });
 
@@ -262,16 +262,16 @@ app.listen(PORT, () => console.log(`Flowra backend running on http://localhost:$
 const streamCache = require("./services/streamCache");
 
 // Frontend posts newly discovered stream IDs + the last scanned block
-app.post("/api/stream-cache", (req, res) => {
+app.post("/api/stream-cache", async (req, res) => {
   const { streamIds, lastScannedBlock } = req.body;
   if (!streamIds || !lastScannedBlock) return res.status(400).json({ error: "Missing fields" });
-  const result = streamCache.updateCache(streamIds, lastScannedBlock);
+  const result = await streamCache.updateCache(streamIds, lastScannedBlock, redisGet, redisSet);
   res.json({ success: true, ...result });
 });
 
 // Frontend fetches cache to know what it already has + where to resume scanning
-app.get("/api/stream-cache", (req, res) => {
-  res.json(streamCache.getCache());
+app.get("/api/stream-cache", async (req, res) => {
+  res.json(await streamCache.getCache(redisGet));
 });
 
 // ─── Option C: Stream registry by wallet address ──────────────────────────────

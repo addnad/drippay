@@ -78,9 +78,15 @@ function haversineDistance(lat1, lon1, lat2, lon2) {
 }
 
 app.post("/api/verify-location", async (req, res) => {
-  const { streamId, receiverAddress, userLat, userLon, allowedLat, allowedLon, radiusMeters, requiredDurationMs } = req.body;
-  if (!streamId || !receiverAddress || userLat === undefined || userLon === undefined || allowedLat === undefined || allowedLon === undefined || !radiusMeters)
+  const { streamId, receiverAddress, userLat, userLon } = req.body;
+  if (!streamId || !receiverAddress || userLat === undefined || userLon === undefined)
     return res.status(400).json({ error: "Missing required fields" });
+
+  const meta = await redisGet("meta:" + streamId);
+  if (!meta || meta.allowedLat === null || meta.allowedLon === null || !meta.radiusMeters)
+    return res.status(400).json({ error: "Stream location config not found. Sender must set stream meta first." });
+
+  const { allowedLat, allowedLon, radiusMeters, requiredDurationMs } = meta;
 
   const distance = haversineDistance(userLat, userLon, allowedLat, allowedLon);
   const insideZone = distance <= radiusMeters;
@@ -309,9 +315,9 @@ app.get("/api/registry/:address", async (req, res) => {
 
 
 app.post("/api/stream-meta", requireAuth, async (req, res) => {
-  const { streamId, conditionMode, proofType, proofInstructions, autoReview } = req.body;
+  const { streamId, conditionMode, proofType, proofInstructions, autoReview, allowedLat, allowedLon, radiusMeters, requiredDurationMs } = req.body;
   if (!streamId) return res.status(400).json({ error: "Missing streamId" });
-  const meta = { streamId, conditionMode, proofType, proofInstructions, autoReview: autoReview === true, timestamp: Date.now() };
+  const meta = { streamId, conditionMode, proofType, proofInstructions, autoReview: autoReview === true, allowedLat: allowedLat ?? null, allowedLon: allowedLon ?? null, radiusMeters: radiusMeters ?? null, requiredDurationMs: requiredDurationMs ?? null, timestamp: Date.now() };
   await redisSet("meta:" + streamId, meta);
   res.json({ success: true, meta });
 });

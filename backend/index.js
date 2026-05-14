@@ -4,6 +4,7 @@ const cors = require("cors");
 const { ethers } = require("ethers");
 
 
+const { handleNonce, handleVerify, requireAuth } = require("./middleware/auth");
 const presence = require("./services/presence");
 const { validateProof } = require("./services/proofValidator");
 const steps = require("./services/steps");
@@ -48,6 +49,10 @@ async function redisAppendToList(key, item) {
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: "10mb" }));
+
+// ─── Auth endpoints ──────────────────────────────────────────────────────────
+app.get("/api/auth/nonce", handleNonce);
+app.post("/api/auth/verify", handleVerify);
 
 const BACKEND_SIGNER_PRIVATE_KEY = process.env.BACKEND_SIGNER_PRIVATE_KEY;
 const PORT = process.env.PORT || 3001;
@@ -219,7 +224,7 @@ async function triggerFlowraVerification(streamId) {
 
 app.get("/api/proof-submit/:streamId", async (req, res) => { const proof = await redisGet("proof:" + req.params.streamId); res.json({ proof: proof || null }); });
 
-app.post("/api/proof-submit/:streamId/approve", async (req, res) => {
+app.post("/api/proof-submit/:streamId/approve", requireAuth, async (req, res) => {
   const proof = await redisGet("proof:" + req.params.streamId);
   if (!proof) return res.status(404).json({ error: "No proof found" });
   proof.status = "approved"; proof.aiVerdict = "approved"; proof.senderNote = req.body.senderNote || "Approved by sender";
@@ -228,7 +233,7 @@ app.post("/api/proof-submit/:streamId/approve", async (req, res) => {
   res.json({ success: true });
 });
 
-app.post("/api/proof-submit/:streamId/reject", async (req, res) => {
+app.post("/api/proof-submit/:streamId/reject", requireAuth, async (req, res) => {
   const proof = await redisGet("proof:" + req.params.streamId);
   if (!proof) return res.status(404).json({ error: "No proof found" });
   proof.status = "rejected"; proof.aiVerdict = "rejected"; proof.senderNote = req.body.senderNote || "Rejected by sender";
@@ -279,7 +284,7 @@ app.get("/api/stream-cache", async (req, res) => {
 
 
 // Called after stream creation — stores streamId for both sender and receiver
-app.post("/api/registry", async (req, res) => {
+app.post("/api/registry", requireAuth, async (req, res) => {
   const { streamId, senderAddress, receiverAddress } = req.body;
   if (!streamId || !senderAddress || !receiverAddress) return res.status(400).json({ error: "Missing fields" });
   const sender = senderAddress.toLowerCase();
@@ -303,7 +308,7 @@ app.get("/api/registry/:address", async (req, res) => {
 // ─── Stream meta (proof instructions) ────────────────────────────────────────
 
 
-app.post("/api/stream-meta", async (req, res) => {
+app.post("/api/stream-meta", requireAuth, async (req, res) => {
   const { streamId, conditionMode, proofType, proofInstructions, autoReview } = req.body;
   if (!streamId) return res.status(400).json({ error: "Missing streamId" });
   const meta = { streamId, conditionMode, proofType, proofInstructions, autoReview: autoReview === true, timestamp: Date.now() };
@@ -376,7 +381,7 @@ app.get("/api/deposit/status/:transferId", async (req, res) => {
 });
 
 // POST /api/withdraw
-app.post("/api/withdraw", async (req, res) => {
+app.post("/api/withdraw", requireAuth, async (req, res) => {
   try {
     const { userId, toAddress, amount } = req.body;
     if (!userId || !toAddress || !amount) return res.status(400).json({ error: "Missing fields" });
@@ -418,7 +423,7 @@ app.get("/api/paymaster/status", async (req, res) => {
 });
 
 // POST /api/paymaster/sponsor — sponsor a transaction on behalf of user
-app.post("/api/paymaster/sponsor", async (req, res) => {
+app.post("/api/paymaster/sponsor", requireAuth, async (req, res) => {
   try {
     const { to, data, value } = req.body;
     if (!to || !data) return res.status(400).json({ error: "Missing to or data" });
@@ -431,7 +436,7 @@ app.post("/api/paymaster/sponsor", async (req, res) => {
 });
 
 // POST /api/paymaster/permit — sign a gasless permit for a user
-app.post("/api/paymaster/permit", async (req, res) => {
+app.post("/api/paymaster/permit", requireAuth, async (req, res) => {
   try {
     const { userAddress, contractAddress } = req.body;
     if (!userAddress || !contractAddress) return res.status(400).json({ error: "Missing fields" });
